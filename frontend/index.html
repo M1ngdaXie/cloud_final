@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Q&A Lite</title>
+</head>
+<body>
+  <h1>Q&A Lite</h1>
+
+  <section>
+    <h2>Ask a Question</h2>
+    <label>User ID: <input id="ask-userId" /></label><br />
+    <label>Title: <input id="ask-title" /></label><br />
+    <label>Body:<br /><textarea id="ask-body"></textarea></label><br />
+    <button onclick="askQuestion()">Submit Question</button>
+  </section>
+
+  <hr />
+
+  <section>
+    <h2>Latest Questions</h2>
+    <button onclick="loadLatest()">Refresh</button>
+    <ul id="latest-list"></ul>
+  </section>
+
+  <script>
+    const API_BASE = "https://YOUR_API_GATEWAY_URL"; // TODO: replace
+
+    async function askQuestion() {
+      const userId = document.getElementById("ask-userId").value.trim();
+      const title = document.getElementById("ask-title").value.trim();
+      const body = document.getElementById("ask-body").value.trim();
+
+      if (!userId || !title || !body) {
+        alert("userId, title, body required");
+        return;
+      }
+
+      const res = await fetch(API_BASE + "/questions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, title, body, tags: [] }),
+      });
+      const data = await res.json();
+      console.log("Created question", data);
+      alert("Question created: " + data.questionId);
+      loadLatest();
+    }
+
+    async function loadLatest() {
+      const res = await fetch(API_BASE + "/browse/latest");
+      const data = await res.json();
+      const ul = document.getElementById("latest-list");
+      ul.innerHTML = "";
+      data.forEach((q) => {
+        const li = document.createElement("li");
+        li.textContent = `${q.title} (votes: ${q.voteCount})`;
+        ul.appendChild(li);
+      });
+    }
+
+    // Load on page open
+    loadLatest();
+  </script>
+</body>
+</html>
