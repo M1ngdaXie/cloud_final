@@ -9,7 +9,12 @@
     * {
       box-sizing: border-box;
     }
-
+    .tiny-btn {
+      padding: 3px 10px;
+      font-size: 11px;
+      border-radius: 999px;
+      margin-left: 8px;
+    }
     body {
       margin: 0;
       padding: 0;
@@ -346,208 +351,275 @@
   </main>
 
   <script>
-    // --- Setup API base URL ---
-    if (!window.APP_CONFIG || !window.APP_CONFIG.apiBase) {
-      alert("API base URL is not configured.");
-      throw new Error("API base URL is not configured");
-    }
-    const API_BASE = window.APP_CONFIG.apiBase;
+  // --- Setup API base URL ---
+  if (!window.APP_CONFIG || !window.APP_CONFIG.apiBase) {
+    alert("API base URL is not configured.");
+    throw new Error("API base URL is not configured");
+  }
+  const API_BASE = window.APP_CONFIG.apiBase;
 
-    // Helper to show a small "no answers" text
-    function setAnswersEmptyMessage(msg) {
-      document.getElementById("answers-empty").textContent = msg || "";
-    }
+  function setAnswersEmptyMessage(msg) {
+    document.getElementById("answers-empty").textContent = msg || "";
+  }
 
-    // --- 1) Create User (POST /users) ---
-    async function createUser() {
-      const username = document.getElementById("user-username").value.trim();
-      const email = document.getElementById("user-email").value.trim();
+  // ---------- Users ----------
 
-      if (!username) {
-        alert("username is required");
-        return;
-      }
+  async function createUser() {
+    const username = document.getElementById("user-username").value.trim();
+    const email = document.getElementById("user-email").value.trim();
 
-      const res = await fetch(API_BASE + "/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, email }),
-      });
-
-      if (!res.ok) {
-        const text = await res.text();
-        alert("Error creating user: " + text);
-        return;
-      }
-
-      const data = await res.json();
-      const userId = data.userId;
-
-      document.getElementById("user-created").textContent =
-        "User created. userId = " + userId;
-
-      // Pre-fill userId in other forms for convenience
-      document.getElementById("ask-userId").value = userId;
-      document.getElementById("answer-userId").value = userId;
-
-      // Clear inputs
-      document.getElementById("user-username").value = "";
-      document.getElementById("user-email").value = "";
+    if (!username) {
+      alert("username is required");
+      return;
     }
 
-    // --- 2) Ask Question (POST /questions) ---
-    async function askQuestion() {
-      const userId = document.getElementById("ask-userId").value.trim();
-      const title = document.getElementById("ask-title").value.trim();
-      const body = document.getElementById("ask-body").value.trim();
+    const res = await fetch(API_BASE + "/users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, email }),
+    });
 
-      if (!userId || !title || !body) {
-        alert("userId, title, body required");
-        return;
-      }
-
-      const res = await fetch(API_BASE + "/questions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, title, body, tags: [] }),
-      });
-
-      if (!res.ok) {
-        const text = await res.text();
-        alert("Error creating question: " + text);
-        return;
-      }
-
-      const data = await res.json();
-      alert("Question created: " + data.questionId);
-
-      // Clear text but keep userId
-      document.getElementById("ask-title").value = "";
-      document.getElementById("ask-body").value = "";
-
-      loadLatest();
+    if (!res.ok) {
+      const text = await res.text();
+      alert("Error creating user: " + text);
+      return;
     }
 
-    // --- 3a) Submit Answer (POST /questions/{id}/answers) ---
-    async function submitAnswer() {
-      const questionId = document.getElementById("answer-questionId").value.trim();
-      const userId = document.getElementById("answer-userId").value.trim();
-      const body = document.getElementById("answer-body").value.trim();
+    const data = await res.json();
+    const userId = data.userId;
 
-      if (!questionId || !userId || !body) {
-        alert("questionId, userId, body required");
-        return;
-      }
+    document.getElementById("user-created").textContent =
+      "User created. userId = " + userId;
 
-      const res = await fetch(
-        API_BASE + "/questions/" + encodeURIComponent(questionId) + "/answers",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId, body }),
-        }
-      );
+    document.getElementById("ask-userId").value = userId;
+    document.getElementById("answer-userId").value = userId;
 
-      if (!res.ok) {
-        const text = await res.text();
-        alert("Error submitting answer: " + text);
-        return;
-      }
+    document.getElementById("user-username").value = "";
+    document.getElementById("user-email").value = "";
+  }
 
-      const data = await res.json();
-      alert("Answer created: " + data.answerId);
+  // ---------- Questions ----------
 
-      document.getElementById("answer-body").value = "";
-      loadAnswers(); // refresh answer list
+  async function askQuestion() {
+    const userId = document.getElementById("ask-userId").value.trim();
+    const title = document.getElementById("ask-title").value.trim();
+    const body = document.getElementById("ask-body").value.trim();
+
+    if (!userId || !title || !body) {
+      alert("userId, title, body required");
+      return;
     }
 
-    // --- 3b) Load Answers (GET /questions/{id}/answers) ---
-    async function loadAnswers() {
-      const questionId = document.getElementById("answer-questionId").value.trim();
-      if (!questionId) {
-        alert("questionId required to load answers");
-        return;
-      }
+    const res = await fetch(API_BASE + "/questions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, title, body, tags: [] }),
+    });
 
-      const res = await fetch(
-        API_BASE + "/questions/" + encodeURIComponent(questionId) + "/answers"
-      );
-
-      if (!res.ok) {
-        const text = await res.text();
-        alert("Error loading answers: " + text);
-        return;
-      }
-
-      const data = await res.json();
-      const ul = document.getElementById("answers-list");
-      ul.innerHTML = "";
-
-      if (!data || data.length === 0) {
-        setAnswersEmptyMessage("No answers yet. Be the first to answer this question!");
-        return;
-      }
-
-      setAnswersEmptyMessage("");
-      data.forEach((a) => {
-        const li = document.createElement("li");
-        li.className = "list-item";
-        li.innerHTML = `
-          <div class="list-item-title">${a.body}</div>
-          <div class="list-item-meta">
-            userId: ${a.userId}
-            <span class="badge">votes: ${a.voteCount}</span>
-          </div>
-        `;
-        ul.appendChild(li);
-      });
+    if (!res.ok) {
+      const text = await res.text();
+      alert("Error creating question: " + text);
+      return;
     }
 
-    // --- 4) Latest Questions (GET /browse/latest) ---
-    async function loadLatest() {
-      const res = await fetch(API_BASE + "/browse/latest");
-      if (!res.ok) {
-        const text = await res.text();
-        alert("Error loading latest questions: " + text);
-        return;
-      }
+    const data = await res.json();
+    alert("Question created: " + data.questionId);
 
-      const data = await res.json();
-      const ul = document.getElementById("latest-list");
-      ul.innerHTML = "";
+    document.getElementById("ask-title").value = "";
+    document.getElementById("ask-body").value = "";
 
-      if (!data || data.length === 0) {
-        const empty = document.createElement("div");
-        empty.className = "answers-empty";
-        empty.textContent = "No questions yet. Ask the first question!";
-        ul.appendChild(empty);
-        return;
-      }
-
-      data.forEach((q) => {
-        const li = document.createElement("li");
-        li.className = "list-item";
-        li.innerHTML = `
-          <div class="list-item-title">${q.title}</div>
-          <div class="list-item-meta">
-            questionId: ${q.questionId}
-            <span class="badge">votes: ${q.voteCount}</span>
-          </div>
-        `;
-
-        // Clicking a question fills the Answer form's questionId
-        li.addEventListener("click", () => {
-          document.getElementById("answer-questionId").value = q.questionId;
-          // Scroll to answer card on narrow screens
-          document.getElementById("answer-questionId").scrollIntoView({ behavior: "smooth", block: "center" });
-        });
-
-        ul.appendChild(li);
-      });
-    }
-
-    // Load latest questions on page open
     loadLatest();
-  </script>
-</body>
-</html>
+  }
+
+  // NEW: vote for a question
+  async function voteQuestion(questionId, delta = 1) {
+    const res = await fetch(
+      API_BASE + "/questions/" + encodeURIComponent(questionId) + "/vote",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ delta }),
+      }
+    );
+
+    if (!res.ok) {
+      const text = await res.text();
+      alert("Error voting on question: " + text);
+      return;
+    }
+
+    // refresh list so voteCount updates
+    await loadLatest();
+  }
+
+  // ---------- Answers ----------
+
+  async function submitAnswer() {
+    const questionId = document
+      .getElementById("answer-questionId")
+      .value.trim();
+    const userId = document.getElementById("answer-userId").value.trim();
+    const body = document.getElementById("answer-body").value.trim();
+
+    if (!questionId || !userId || !body) {
+      alert("questionId, userId, body required");
+      return;
+    }
+
+    const res = await fetch(
+      API_BASE + "/questions/" + encodeURIComponent(questionId) + "/answers",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, body }),
+      }
+    );
+
+    if (!res.ok) {
+      const text = await res.text();
+      alert("Error submitting answer: " + text);
+      return;
+    }
+
+    const data = await res.json();
+    alert("Answer created: " + data.answerId);
+
+    document.getElementById("answer-body").value = "";
+    loadAnswers(); // refresh list
+  }
+
+  // NEW: vote for an answer
+  async function voteAnswer(answerId, delta = 1) {
+    const res = await fetch(
+      API_BASE + "/answers/" + encodeURIComponent(answerId) + "/vote",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ delta }),
+      }
+    );
+
+    if (!res.ok) {
+      const text = await res.text();
+      alert("Error voting on answer: " + text);
+      return;
+    }
+
+    // refresh answers for current question
+    await loadAnswers();
+  }
+
+  async function loadAnswers() {
+    const questionId = document
+      .getElementById("answer-questionId")
+      .value.trim();
+    if (!questionId) {
+      alert("questionId required to load answers");
+      return;
+    }
+
+    const res = await fetch(
+      API_BASE + "/questions/" + encodeURIComponent(questionId) + "/answers"
+    );
+
+    if (!res.ok) {
+      const text = await res.text();
+      alert("Error loading answers: " + text);
+      return;
+    }
+
+    const data = await res.json();
+    const ul = document.getElementById("answers-list");
+    ul.innerHTML = "";
+
+    if (!data || data.length === 0) {
+      setAnswersEmptyMessage(
+        "No answers yet. Be the first to answer this question!"
+      );
+      return;
+    }
+
+    setAnswersEmptyMessage("");
+    data.forEach((a) => {
+      const li = document.createElement("li");
+      li.className = "list-item";
+      li.innerHTML = `
+        <div class="list-item-title">${a.body}</div>
+        <div class="list-item-meta">
+          userId: ${a.userId}
+          <span class="badge">
+            votes: <span class="vote-num">${a.voteCount}</span>
+          </span>
+          <button class="tiny-btn vote-a-up">+1 vote</button>
+        </div>
+      `;
+
+      // wire upvote button
+      const voteBtn = li.querySelector(".vote-a-up");
+      voteBtn.addEventListener("click", (e) => {
+        e.stopPropagation(); // don't trigger other clicks
+        voteAnswer(a.answerId, 1);
+      });
+
+      ul.appendChild(li);
+    });
+  }
+
+  // ---------- Latest questions ----------
+
+  async function loadLatest() {
+    const res = await fetch(API_BASE + "/browse/latest");
+    if (!res.ok) {
+      const text = await res.text();
+      alert("Error loading latest questions: " + text);
+      return;
+    }
+
+    const data = await res.json();
+    const ul = document.getElementById("latest-list");
+    ul.innerHTML = "";
+
+    if (!data || data.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "answers-empty";
+      empty.textContent = "No questions yet. Ask the first question!";
+      ul.appendChild(empty);
+      return;
+    }
+
+    data.forEach((q) => {
+      const li = document.createElement("li");
+      li.className = "list-item";
+      li.innerHTML = `
+        <div class="list-item-title">${q.title}</div>
+        <div class="list-item-meta">
+          questionId: ${q.questionId}
+          <span class="badge">
+            votes: <span class="vote-num">${q.voteCount}</span>
+          </span>
+          <button class="tiny-btn vote-q-up">+1 vote</button>
+        </div>
+      `;
+
+      // click on card → fill Question ID in Answer form
+      li.addEventListener("click", () => {
+        document.getElementById("answer-questionId").value = q.questionId;
+        document
+          .getElementById("answer-questionId")
+          .scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+
+      // upvote button (don't trigger card click)
+      const voteBtn = li.querySelector(".vote-q-up");
+      voteBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        voteQuestion(q.questionId, 1);
+      });
+
+      ul.appendChild(li);
+    });
+  }
+
+  // Load latest questions on page open
+  loadLatest();
+</script>
